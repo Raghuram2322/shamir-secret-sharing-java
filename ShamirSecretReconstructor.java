@@ -57,10 +57,15 @@ public class ShamirSecretReconstructor {
             int x = Integer.parseInt(key);
             int base = Integer.parseInt(point.getString("base"));
             String valueStr = point.getString("value");
-            BigInteger y = new BigInteger(valueStr, base);
 
-            xList.add(x);
-            yList.add(y);
+            try {
+                BigInteger y = new BigInteger(valueStr, base);
+                xList.add(x);
+                yList.add(y);
+            } catch (NumberFormatException e) {
+                System.out.println("Error parsing value for share " + key + ": " + valueStr);
+                return BigInteger.ZERO;  // Return a default error value (can be adjusted as needed)
+            }
         }
 
         return lagrangeInterpolationAtZero(xList, yList);
