@@ -32,65 +32,72 @@ public class ShamirSecretReconstructor {
           "9": {"base": "12", "value": "45153788322a1255483"},
           "10": {"base": "7", "value": "1101613130313526312514143"}
         }
-        """;
+        """; 
 
         // Process and print secrets
-        BigInteger secret1 = findSecretFromJson(json1);
-        BigInteger secret2 = findSecretFromJson(json2);
+        BigInteger secret1 = findSecretFromJson(json1);  // Find the secret for the first test case
+        BigInteger secret2 = findSecretFromJson(json2);  // Find the secret for the second test case
 
-        // Final output
+        // Final output: Print the reconstructed secrets for both test cases
         System.out.println(secret1);
         System.out.println(secret2);
     }
 
+    // Method to extract shares from the given JSON and reconstruct the secret
     public static BigInteger findSecretFromJson(String jsonData) {
-        JSONObject obj = new JSONObject(jsonData);
+        JSONObject obj = new JSONObject(jsonData);  // Parse the JSON string into a JSONObject
 
-        // Extract all x and y points from JSON
+        // Lists to store x and y values from the JSON data (shares)
         List<Integer> xList = new ArrayList<>();
         List<BigInteger> yList = new ArrayList<>();
 
+        // Iterate over each entry in the JSON object to extract shares
         for (String key : obj.keySet()) {
-            if (key.equals("keys")) continue;
+            if (key.equals("keys")) continue;  // Skip the 'keys' object
 
-            JSONObject point = obj.getJSONObject(key);
-            int x = Integer.parseInt(key);
-            int base = Integer.parseInt(point.getString("base"));
-            String valueStr = point.getString("value");
+            JSONObject point = obj.getJSONObject(key);  // Get the share data for each x-coordinate
+            int x = Integer.parseInt(key);  // Parse x-coordinate (key of the share)
+            int base = Integer.parseInt(point.getString("base"));  // Get the base of the value
+            String valueStr = point.getString("value");  // Get the value string of the share
 
             try {
+                // Convert the value from the specified base to a BigInteger
                 BigInteger y = new BigInteger(valueStr, base);
-                xList.add(x);
-                yList.add(y);
+                xList.add(x);  // Add x to the list of x-coordinates
+                yList.add(y);  // Add y to the list of y-values (shares)
             } catch (NumberFormatException e) {
+                // If there's an error in parsing the value (invalid number), print error message
                 System.out.println("Error parsing value for share " + key + ": " + valueStr);
-                return BigInteger.ZERO;  // Return a default error value (can be adjusted as needed)
+                return BigInteger.ZERO;  // Return a default error value (adjustable)
             }
         }
 
+        // Apply Lagrange interpolation to calculate the secret (reconstructed value at x = 0)
         return lagrangeInterpolationAtZero(xList, yList);
     }
 
+    // Lagrange interpolation at x = 0 (reconstructing the secret)
     public static BigInteger lagrangeInterpolationAtZero(List<Integer> xList, List<BigInteger> yList) {
-        int k = xList.size();
-        BigInteger result = BigInteger.ZERO;
+        int k = xList.size();  // Number of shares
+        BigInteger result = BigInteger.ZERO;  // Initialize the result to 0 (secret)
 
+        // Loop over each share and compute the Lagrange basis polynomials
         for (int j = 0; j < k; j++) {
-            BigInteger numerator = BigInteger.ONE;
-            BigInteger denominator = BigInteger.ONE;
+            BigInteger numerator = BigInteger.ONE;  // Initialize numerator for Lagrange basis
+            BigInteger denominator = BigInteger.ONE;  // Initialize denominator for Lagrange basis
 
+            // Calculate the product of (x - x_i) terms for the denominator and (x - x_j) for the numerator
             for (int i = 0; i < k; i++) {
-                if (i == j) continue;
+                if (i == j) continue;  // Skip when i equals j (no division by zero)
                 numerator = numerator.multiply(BigInteger.valueOf(-xList.get(i)));
-                denominator = denominator.multiply(
-                    BigInteger.valueOf(xList.get(j) - xList.get(i))
-                );
+                denominator = denominator.multiply(BigInteger.valueOf(xList.get(j) - xList.get(i)));
             }
 
+            // Calculate the Lagrange term and add it to the result
             BigInteger term = yList.get(j).multiply(numerator).divide(denominator);
-            result = result.add(term);
+            result = result.add(term);  // Add this term to the final secret value
         }
 
-        return result;
+        return result;  // Return the reconstructed secret (value at x = 0)
     }
 }
